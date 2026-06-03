@@ -4,7 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import dev.apehum.elytrabonk.HurtSoundSuppression;
-import dev.apehum.elytrabonk.ElytraBonkClient;
+import dev.apehum.elytrabonk.ElytraBonk;
 import net.minecraft.client.Minecraft;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
@@ -35,7 +35,7 @@ public abstract class LivingEntityMixin {
 		}
 
 		double x = self.getX(), y = self.getY(), z = self.getZ();
-		self.level().playLocalSound(x, y, z, ElytraBonkClient.BONK_SOUND, SoundSource.PLAYERS, volume, 1.0F, false);
+		self.level().playLocalSound(x, y, z, ElytraBonk.BONK_SOUND, SoundSource.PLAYERS, volume, 1.0F, false);
 
 		if (self != Minecraft.getInstance().player) {
 			HurtSoundSuppression.expectHurtSound(x, y, z, self.level().getGameTime());

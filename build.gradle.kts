@@ -1,75 +1,152 @@
+import dev.apehum.elytrabonk.VersionResolver
+
 plugins {
-	id("net.fabricmc.fabric-loom")
-	`maven-publish`
+    id("dev.isxander.modstitch.base") version "0.8.4"
+    id("me.modmuss50.mod-publish-plugin") version "1.1.0"
 }
 
-version = providers.gradleProperty("mod_version").get()
-group = providers.gradleProperty("maven_group").get()
+val platform = stonecutter.current.project.substringAfter('-')
 
-repositories {
-	// Add repositories to retrieve artifacts from in here.
-	// You should only use this when depending on other mods because
-	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
-	// for more information about repositories.
+base {
+    archivesName = "${property("archives_base_name")}-$platform"
 }
 
-dependencies {
-	// To change the versions see the gradle.properties file
-	minecraft("com.mojang:minecraft:${providers.gradleProperty("minecraft_version").get()}")
-	
-	implementation("net.fabricmc:fabric-loader:${providers.gradleProperty("loader_version").get()}")
+group = property("maven_group")!!
 
-	// Fabric API. This is technically optional, but you probably want it anyway.
-	implementation("net.fabricmc.fabric-api:fabric-api:${providers.gradleProperty("fabric_api_version").get()}")
-	
+modstitch {
+    minecraftVersion = property("minecraft_version") as String
+
+    loom {
+        fabricLoaderVersion = property("deps.fabric_loader_version") as String
+
+        configureLoom {
+            runs.all {
+                runDir = "../../run"
+            }
+        }
+    }
+
+    moddevgradle {
+        neoForgeVersion = property("deps.neoforge") as? String
+
+        defaultRuns(client = true, server = false)
+
+        configureNeoForge {
+            runs.all {
+                gameDirectory = file("../../run")
+            }
+        }
+    }
+
+    metadata {
+        modId = "elytrabonk"
+        modVersion = "${property("mod_version")}+${stonecutter.current.version}"
+        modName = "Elytra Bonk"
+        modDescription = "Plays a bonk sound when you fly into a wall with an elytra."
+
+        replacementProperties.apply {
+            put("fabric_loader_version", property("deps.fabric_loader_version") as String)
+            put("minecraft_version_dependency", property("minecraft_version_dependency") as String)
+            put("pack_format", property("pack_format") as String)
+        }
+    }
+
+    mixin {
+        addMixinsToModManifest = true
+
+        configs.register("elytrabonk")
+    }
 }
 
-tasks.processResources {
-	val version = version
-	inputs.property("version", version)
-
-	filesMatching("fabric.mod.json") {
-		expand("version" to version)
-	}
+stonecutter {
+    // ResourceLocation was renamed to Identifier in 1.21.11; older builds use the old name.
+    replacements.string(current.parsed < "1.21.11") {
+        replace("Identifier", "ResourceLocation")
+    }
 }
 
-tasks.withType<JavaCompile>().configureEach {
-	options.release = 25
+val outputJarTask = modstitch.finalJarTask
+
+tasks {
+    jar {
+        from("LICENSE") {
+            rename { "${it}_${project.property("archives_base_name")}" }
+        }
+    }
+
+    val copyToRoot =
+        register<Copy>("copyToRoot") {
+            dependsOn(outputJarTask)
+            from(outputJarTask.map { it.archiveFile.get() })
+            into(rootProject.layout.buildDirectory.dir("libs"))
+        }
+
+    build {
+        dependsOn(copyToRoot)
+    }
 }
 
-java {
-	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-	// if it is present.
-	// If you remove this line, sources will not be generated.
-	withSourcesJar()
+publishMods {
+    changelog =
+        rootProject.layout.projectDirectory
+            .file("changelog.md")
+            .asFile
+            .readText()
+    type = STABLE
+    modLoaders.add(platform)
 
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
-}
+    val loaderDisplayName =
+        when (platform) {
+            "fabric" -> "Fabric"
+            "neoforge" -> "NeoForge"
+            else -> throw IllegalStateException("Unsupported platform $platform")
+        }
 
-tasks.jar {
-	val projectName = project.name
-	inputs.property("projectName", projectName)
+    displayName = "[$loaderDisplayName ${property("minecraft_version")}] Elytra Bonk ${property("mod_version")}"
+    file = outputJarTask.get().archiveFile
 
-	from("LICENSE") {
-		rename { "${it}_$projectName" }
-	}
-}
+    val modrinthToken =
+        providers
+            .gradleProperty("modrinth_token")
+            .orElse(
+                providers.environmentVariable("MODRINTH_TOKEN").orNull ?: "",
+            ).orNull
+            ?.takeIf { it.isNotBlank() }
 
-// configure the maven publication
-publishing {
-	publications {
-		register<MavenPublication>("mavenJava") {
-			from(components["java"])
-		}
-	}
+    val curseforgeToken =
+        providers
+            .gradleProperty("curseforge_token")
+            .orElse(
+                providers.environmentVariable("CURSEFORGE_TOKEN").orNull ?: "",
+            ).orNull
+            ?.takeIf { it.isNotBlank() }
 
-	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
-	repositories {
-		// Add repositories to publish to here.
-		// Notice: This block does NOT have the same function as the block in the top level.
-		// The repositories here will be used for publishing your artifact, not for
-		// retrieving dependencies.
-	}
+    val dryRunProperty =
+        providers
+            .gradleProperty("dry_run")
+            .getOrElse("false")
+            .toBoolean()
+
+    dryRun = modrinthToken == null || curseforgeToken == null || dryRunProperty
+
+    val versions =
+        VersionResolver
+            .getMinecraftVersionsInRange("release", property("minecraft_version_dependency") as String)
+            .get()
+            .map { it.id }
+            .also { println("Minecraft versions: $it") }
+
+    // TODO: project ids
+    modrinth {
+        projectId = ""
+        accessToken = modrinthToken
+        minecraftVersions.addAll(versions)
+    }
+
+    curseforge {
+        projectId = ""
+        accessToken = curseforgeToken
+        minecraftVersions.addAll(versions)
+        changelogType = "markdown"
+    }
 }
