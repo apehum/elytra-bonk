@@ -47,7 +47,6 @@ modstitch {
         replacementProperties.apply {
             put("fabric_loader_version", property("deps.fabric_loader_version") as String)
             put("minecraft_version_dependency", property("minecraft_version_dependency") as String)
-            put("pack_format", property("pack_format") as String)
         }
     }
 
