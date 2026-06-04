@@ -9,4 +9,4 @@ Client-side Fabric & NeoForge mod that plays a bonk sound when you fly into a wa
 
 Inspired by [Celeste Bonk Mod](https://gamebanana.com/mods/373922)
 
-https://github.com/apehum/elytra-bonk/raw/main/.github/assets/bonk.mp4
+https://github.com/user-attachments/assets/bad8093d-9639-4db4-8e41-246b172a689f
