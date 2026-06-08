@@ -1,1 +1,1 @@
-- Plays a bonk sound when you fly into a wall with an elytra.
+- Sound is no longer registered in registry to fix mod being required on both sides, when it's installed on the server-side.
