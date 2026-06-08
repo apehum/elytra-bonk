@@ -2,7 +2,7 @@ import dev.apehum.elytrabonk.VersionResolver
 
 plugins {
     id("dev.isxander.modstitch.base") version "0.8.4"
-    id("me.modmuss50.mod-publish-plugin") version "1.1.0"
+    id("me.modmuss50.mod-publish-plugin") version "2.0.0-beta.2"
 }
 
 val platform = stonecutter.current.project.substringAfter('-')
@@ -135,17 +135,18 @@ publishMods {
             .map { it.id }
             .also { println("Minecraft versions: $it") }
 
-    // TODO: project ids
+
     modrinth {
-        projectId = ""
+        projectId = "NnnM5ni4"
         accessToken = modrinthToken
         minecraftVersions.addAll(versions)
     }
 
     curseforge {
-        projectId = ""
+        projectId = "1564314"
         accessToken = curseforgeToken
         minecraftVersions.addAll(versions)
         changelogType = "markdown"
+        client = true
     }
 }
