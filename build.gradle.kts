@@ -3,6 +3,7 @@ import dev.apehum.elytrabonk.VersionResolver
 plugins {
     id("dev.isxander.modstitch.base") version "0.8.4"
     id("me.modmuss50.mod-publish-plugin") version "2.0.0-beta.2"
+    id("dev.kikugie.fletching-table.relocate") version "0.2.0-alpha.9"
 }
 
 val platform = stonecutter.current.project.substringAfter('-')
@@ -27,7 +28,8 @@ modstitch {
     }
 
     moddevgradle {
-        neoForgeVersion = property("deps.neoforge") as? String
+        neoForgeVersion = findProperty("deps.neoforge") as? String
+        forgeVersion = findProperty("deps.forge") as? String
 
         defaultRuns(client = true, server = false)
 
@@ -58,13 +60,31 @@ modstitch {
 }
 
 stonecutter {
-    // ResourceLocation was renamed to Identifier in 1.21.11; older builds use the old name.
     replacements.string(current.parsed < "1.21.11") {
         replace("Identifier", "ResourceLocation")
     }
 }
 
-val outputJarTask = modstitch.finalJarTask
+fletchingTable {
+    relocate.configure(sourceSets.main) {
+        matching("(*).json5") {
+            into("\$1.json")
+            with(Json5ToJson)
+        }
+    }
+}
+
+dependencies {
+    if (modstitch.isModDevGradleLegacy) {
+        val mixinExtras = "0.5.5"
+        "annotationProcessor"("io.github.llamalad7:mixinextras-common:$mixinExtras")
+        "compileOnly"("io.github.llamalad7:mixinextras-common:$mixinExtras")
+        "implementation"("io.github.llamalad7:mixinextras-forge:$mixinExtras")
+        "jarJar"("io.github.llamalad7:mixinextras-forge:$mixinExtras")
+    }
+}
+
+val outputJarTask = provider { modstitch.finalJarTask.get() }
 
 tasks {
     jar {
@@ -98,11 +118,12 @@ publishMods {
         when (platform) {
             "fabric" -> "Fabric"
             "neoforge" -> "NeoForge"
+            "forge" -> "Forge"
             else -> throw IllegalStateException("Unsupported platform $platform")
         }
 
     displayName = "[$loaderDisplayName ${property("minecraft_version")}] Elytra Bonk ${property("mod_version")}"
-    file = outputJarTask.get().archiveFile
+    file = outputJarTask.flatMap { it.archiveFile }
 
     val modrinthToken =
         providers

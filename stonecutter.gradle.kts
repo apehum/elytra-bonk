@@ -5,7 +5,7 @@ plugins {
 stonecutter active "26.1-fabric"
 
 stonecutter parameters {
-    constants.match(node.metadata.project.substringAfterLast('-'), "fabric", "neoforge")
+    constants.match(node.metadata.project.substringAfterLast('-'), "fabric", "neoforge", "forge")
 }
 
 gradle.projectsEvaluated {

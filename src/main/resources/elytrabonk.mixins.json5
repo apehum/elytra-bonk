@@ -2,7 +2,14 @@
     "required": true,
     "minVersion": "0.8",
     "package": "dev.apehum.elytrabonk.mixin",
+    //? if <1.20.5 {
+    /*"compatibilityLevel": "JAVA_17",
+    *///?} else {
     "compatibilityLevel": "JAVA_21",
+    //?}
+    //? if forge {
+    /*"refmap": "elytrabonk.refmap.json",
+    *///?}
     "mixins": [
     ],
     "client": [
